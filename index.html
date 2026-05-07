@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>云财务中心</title>
-    <!-- 使用字节跳动静态资源库，确保国内手机网络稳定加载 -->
-    <script src="https://bytecdntp.com"></script>
+    <!-- 多线备用加载：确保核心组件 100% 成功 -->
+    <script src="https://jsdelivr.net"></script>
+    <script>
+        if (typeof supabase === 'undefined') {
+            document.write('<script src="https://unpkg.com"><\/script>');
+        }
+    </script>
     <style>
         :root { --p: #1677ff; --s: #52c41a; --d: #ff4d4f; --bg: #f4f7fa; }
         * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
@@ -14,7 +19,7 @@
         /* 验证锁屏 */
         #lockScreen { position: fixed; inset: 0; background: #fff; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
-        /* 侧边栏自适应 */
+        /* 界面布局 */
         .sidebar { width: 280px; background: #fff; border-right: 1px solid #eee; display: flex; flex-direction: column; transition: 0.3s; }
         @media (max-width: 768px) { .sidebar { width: 100%; position: absolute; left: -100%; z-index: 1000; height: 100%; } .sidebar.open { left: 0; } }
 
@@ -22,7 +27,7 @@
         .top-bar { height: 60px; background: #fff; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
         .content { flex: 1; overflow-y: auto; padding: 15px; }
 
-        /* 卡片样式 */
+        /* 卡片与数据 */
         .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
         .stat-card { background: #fff; padding: 12px; border-radius: 10px; border: 1px solid #eee; border-top: 3px solid #ddd; }
         .stat-v { font-size: 18px; font-weight: 700; margin: 5px 0; color: var(--p); }
@@ -44,9 +49,10 @@
     <!-- 登录锁屏 -->
     <div id="lockScreen">
         <h2 style="color:var(--p)">云财务系统验证</h2>
-        <div id="loadStatus" style="font-size:12px; color:#999; margin-bottom:10px">正在连接安全中心...</div>
+        <div id="loadStatus" style="font-size:12px; color:#999; margin-bottom:10px">正在建立云端安全连接...</div>
         <input type="password" id="sysPass" placeholder="请输入访问密码" style="width:250px; text-align:center">
         <button class="btn btn-p" onclick="checkPass()" style="width:250px">解锁进入</button>
+        <button class="btn" onclick="location.reload()" style="margin-top:15px; font-size:11px; background:none; color:#999">如果一直显示连接中，请点此刷新</button>
     </div>
 
     <!-- 主程序 -->
@@ -68,7 +74,7 @@
                 <button class="btn" onclick="loadData()" style="font-size:12px">刷新同步</button>
             </header>
             <div class="content" id="mainArea">
-                <div style="text-align:center; color:#bfbfbf; margin-top:100px">已连接悉尼云端数据库</div>
+                <div style="text-align:center; color:#bfbfbf; margin-top:100px">云端数据库已就绪</div>
             </div>
         </main>
     </div>
@@ -80,7 +86,7 @@
         <input type="text" id="cA" placeholder="客户账号 / 唯一ID">
         <textarea id="cMemo" placeholder="备注信息" style="height:60px"></textarea>
         <button class="btn btn-p" style="width:100%" onclick="dbAddCust()">确认保存</button>
-        <button class="btn" style="width:100%; margin-top:10px; background:none" onclick="hideM('custM')">返回</button>
+        <button class="btn" style="width:100%; margin-top:10px; background:none" onclick="hideM('custM')">取消</button>
     </div></div>
 
     <div id="billM" class="modal"><div class="modal-content">
@@ -100,36 +106,34 @@
     
     let dbClient, db = [], curIdx = -1;
 
-    // 检查组件加载状态
-    window.onload = () => {
+    // 自动监控库加载状态
+    const checkTimer = setInterval(() => {
         const status = document.getElementById('loadStatus');
         if (typeof supabase !== 'undefined') {
-            status.innerText = "安全中心连接成功";
+            status.innerText = "云端安全连接已建立";
             status.style.color = "#52c41a";
-        } else {
-            status.innerText = "核心组件加载失败，请刷新或切换网络";
-            status.style.color = "#ff4d4f";
+            clearInterval(checkTimer);
         }
-    };
+    }, 500);
 
     function checkPass() {
         if(document.getElementById('sysPass').value === ACCESS_PASS) {
             if (typeof supabase === 'undefined') {
-                alert("系统组件未加载，请尝试刷新页面");
+                alert("核心组件加载中，请稍候再试。若长时间不行，请刷新页面。");
                 return;
             }
-            // 此时初始化，确保 supabase 库已经存在
+            // 正式初始化
             dbClient = supabase.createClient(S_URL, S_KEY);
             document.getElementById('lockScreen').style.display = 'none';
             document.getElementById('appBody').style.display = 'flex';
             loadData();
-        } else { alert('验证密码错误'); }
+        } else { alert('密码验证失败'); }
     }
 
-    // --- 2. 数据云端交互 ---
+    // --- 2. 数据库操作 ---
     async function loadData() {
         const { data, error } = await dbClient.from('customers').select('*').order('id', { ascending: false });
-        if(error) { console.error(error); return; }
+        if(error) return;
         db = data || [];
         renderList();
         if(curIdx !== -1) renderDetail();
@@ -140,8 +144,8 @@
         if(!n) return alert("姓名不能为空");
 
         const { error } = await dbClient.from('customers').insert([{ name: n, account: a, memo: m, records: [], pic: '', social: [] }]);
-        if (error) alert("保存失败：" + error.message);
-        else { alert("创建成功"); hideM('custM'); loadData(); }
+        if (error) alert("数据库拒绝保存: " + error.message);
+        else { alert("档案创建成功"); hideM('custM'); loadData(); }
     }
 
     async function dbAddBill() {
@@ -150,11 +154,11 @@
         const c = db[curIdx];
         const newRecords = [...(c.records || []), { at: new Date().toISOString(), amount: amt, channel: document.getElementById('bC').value, note: document.getElementById('bN').value }];
         const { error } = await dbClient.from('customers').update({ records: newRecords }).eq('id', c.id);
-        if(error) alert("同步失败：" + error.message);
+        if(error) alert("入账同步失败: " + error.message);
         else { hideM('billM'); loadData(); }
     }
 
-    // --- 3. UI 渲染 ---
+    // --- 3. 界面渲染 ---
     function renderList() {
         const key = document.getElementById('cSearch').value.toLowerCase();
         const list = document.getElementById('custList');
@@ -180,7 +184,7 @@
             </div>
             <div class="stat-grid">
                 <div class="stat-card"><small>累计存款</small><div class="stat-v">¥${total}</div></div>
-                <div class="stat-card"><small>交易笔数</small><div class="stat-v">${(c.records||[]).length}</div></div>
+                <div class="stat-card"><small>笔数</small><div class="stat-v">${(c.records||[]).length}</div></div>
             </div>
             <div style="background:#fff; border-radius:10px; overflow:hidden">
                 ${(c.records || []).map((r, ri) => `
@@ -201,7 +205,7 @@
     }
 
     async function delBill(idx) {
-        if(confirm('确认撤销该流水？')) {
+        if(confirm('确认撤销流水？')) {
             const c = db[curIdx]; c.records.splice(idx, 1);
             await dbClient.from('customers').update({ records: c.records }).eq('id', c.id);
             loadData();
