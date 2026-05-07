@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>云端员工财务管理系统</title>
-    <!-- 使用字节跳动国内镜像，解决国外 CDN 连接超时问题 -->
-    <script src="https://bytecdntp.com"></script>
+    <!-- 多线备用加载：确保任何网络下组件均能运行 -->
+    <script src="https://bootcdn.net"></script>
+    <script>
+        if (typeof supabase === 'undefined') {
+            document.write('<script src="https://bytecdntp.com"><\/script>');
+        }
+    </script>
     <style>
         :root { --p: #1677ff; --s: #52c41a; --d: #ff4d4f; --bg: #f4f7fa; }
         * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
@@ -15,7 +20,7 @@
         #loginScreen { position: fixed; inset: 0; background: #fff; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .login-box { width: 310px; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; border: 1px solid #f0f0f0; }
         
-        /* 布局 */
+        /* 侧边栏与布局 */
         .sidebar { width: 280px; background: #fff; border-right: 1px solid #eee; display: flex; flex-direction: column; transition: 0.3s; }
         @media (max-width: 768px) { .sidebar { width: 100%; position: absolute; left: -100%; z-index: 1000; height: 100%; } .sidebar.open { left: 0; } }
         .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
@@ -39,11 +44,10 @@
     <div id="loginScreen">
         <div class="login-box">
             <h2 style="color:var(--p); margin-top:0">员工系统登录</h2>
-            <div id="loadStatus" style="font-size:12px; color:#999; margin-bottom:20px">正在同步云端安全组件...</div>
+            <div id="loadStatus" style="font-size:12px; color:#999; margin-bottom:20px">正在建立安全连接...</div>
             <input type="text" id="staffId" placeholder="员工账号">
             <input type="password" id="staffPass" placeholder="登录密码">
             <button class="btn btn-p" onclick="staffLogin()" style="width:100%; height:45px">进入工作台</button>
-            <div style="margin-top:15px; font-size:11px; color:#ccc">数据加密存储于悉尼节点</div>
         </div>
     </div>
 
@@ -51,7 +55,7 @@
     <div id="appBody" style="display:none; width:100%; height:100%">
         <aside class="sidebar" id="sideNav">
             <div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center">
-                <div style="font-size:12px; color:#888">工作号: <b id="displayStaff" style="color:var(--p)"></b></div>
+                <div style="font-size:12px; color:#888">工号: <b id="displayStaff" style="color:var(--p)"></b></div>
                 <button class="btn" onclick="location.reload()" style="padding:5px; background:none; color:var(--d); font-size:12px">安全退出</button>
             </div>
             <div style="padding:10px"><input type="text" id="cSearch" placeholder="查找我的客户..." oninput="renderList()"></div>
@@ -71,7 +75,7 @@
         </main>
     </div>
 
-    <!-- 弹窗部分 -->
+    <!-- 弹窗 -->
     <div id="custM" class="modal"><div class="modal-content">
         <h3 style="margin-top:0">新建客户 (归属个人)</h3>
         <input type="text" id="cN" placeholder="客户姓名">
@@ -82,7 +86,7 @@
     </div></div>
 
     <div id="billM" class="modal"><div class="modal-content">
-        <h3 style="margin-top:0">记一笔入账</h3>
+        <h3>记一笔入账</h3>
         <input type="number" id="bA" placeholder="入账金额">
         <select id="bC"><option>微信</option><option>支付宝</option><option>U</option><option>银联</option></select>
         <input type="text" id="bN" placeholder="流水备注">
@@ -91,7 +95,7 @@
     </div></div>
 
 <script>
-    // --- 1. 配置区 (STAFF_DB 必须在最顶层初始化) ---
+    // --- 1. 配置区 ---
     const STAFF_DB = {
         "staff01": "111111",
         "staff02": "222222",
@@ -99,7 +103,7 @@
     };
 
     const S_URL = 'https://supabase.co'; 
-    const S_KEY = '在这里粘贴你的anon_public密钥'; 
+    const S_KEY = '在此粘贴你的anon_public密钥'; 
     
     let dbClient, db = [], curIdx = -1, currentStaff = "";
 
@@ -107,7 +111,7 @@
     const checkTimer = setInterval(() => {
         const status = document.getElementById('loadStatus');
         if (typeof supabase !== 'undefined') {
-            status.innerText = "云端连接已建立";
+            status.innerText = "云端安全连接已建立";
             status.style.color = "#52c41a";
             clearInterval(checkTimer);
         }
@@ -115,16 +119,15 @@
 
     // --- 2. 登录逻辑 (解决初始化顺序报错) ---
     function staffLogin() {
+        if (typeof supabase === 'undefined') {
+            alert("核心组件加载超时，请刷新页面或尝试切换手机网络。");
+            return;
+        }
+        
         const id = document.getElementById('staffId').value;
         const pass = document.getElementById('staffPass').value;
 
-        if (typeof supabase === 'undefined') {
-            alert("核心组件正在连接中，请稍等3秒再试。");
-            return;
-        }
-
         if (STAFF_DB[id] && STAFF_DB[id] === pass) {
-            // 登录成功时才初始化客户端，防止提前调用报错
             dbClient = supabase.createClient(S_URL, S_KEY);
             currentStaff = id;
             document.getElementById('displayStaff').innerText = id;
@@ -141,7 +144,7 @@
         const { data, error } = await dbClient
             .from('customers')
             .select('*')
-            .eq('owner', currentStaff) // 仅加载属于该员工的客户
+            .eq('owner', currentStaff)
             .order('id', { ascending: false });
 
         if(error) return console.error(error);
@@ -155,8 +158,7 @@
         if(!n) return alert("姓名必填");
 
         const { error } = await dbClient.from('customers').insert([{ 
-            name: n, account: a, memo: m, 
-            owner: currentStaff, 
+            name: n, account: a, memo: m, owner: currentStaff, 
             records: [], pic: '', social: [] 
         }]);
 
@@ -204,7 +206,7 @@
             </div>
             <div style="background:#fff; border-radius:10px; overflow:hidden">
                 ${(c.records || []).map((r, ri) => `
-                    <div style="padding:10px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between; font-size:13px">
+                    <div style="padding:12px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between; font-size:13px">
                         <div><b>${r.channel}</b><br><small style="color:#999;font-size:10px">${new Date(r.at).toLocaleString()}</small></div>
                         <div style="text-align:right"><b>¥${r.amount}</b><br><a href="javascript:;" onclick="delBill(${ri})" style="color:var(--d);font-size:10px">撤销记录</a></div>
                     </div>`).reverse().join('')}
@@ -221,7 +223,7 @@
     }
 
     async function delBill(idx) {
-        if(confirm('确认撤销流水？')) {
+        if(confirm('确认撤销？')) {
             const c = db[curIdx]; c.records.splice(idx, 1);
             await dbClient.from('customers').update({ records: c.records }).eq('id', c.id);
             loadData();
