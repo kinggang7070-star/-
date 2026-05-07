@@ -4,13 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>云端员工财务管理系统</title>
-    <!-- 多线 CDN 备用加载：确保任何网络下组件均能运行 -->
+    <!-- 使用字节跳动国内镜像，解决国外 CDN 连接超时问题 -->
     <script src="https://bytecdntp.com"></script>
-    <script>
-        if (typeof supabase === 'undefined') {
-            document.write('<script src="https://baomitu.com"><\/script>');
-        }
-    </script>
     <style>
         :root { --p: #1677ff; --s: #52c41a; --d: #ff4d4f; --bg: #f4f7fa; }
         * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
@@ -18,7 +13,7 @@
 
         /* 登录屏 */
         #loginScreen { position: fixed; inset: 0; background: #fff; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .login-box { width: 310px; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; }
+        .login-box { width: 310px; padding: 30px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); text-align: center; border: 1px solid #f0f0f0; }
         
         /* 布局 */
         .sidebar { width: 280px; background: #fff; border-right: 1px solid #eee; display: flex; flex-direction: column; transition: 0.3s; }
@@ -27,7 +22,7 @@
         .top-bar { height: 60px; background: #fff; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
         .content { flex: 1; overflow-y: auto; padding: 15px; }
 
-        /* 样式 */
+        /* 交互组件 */
         .btn { padding: 10px 15px; border-radius: 8px; border: none; cursor: pointer; font-weight: 600; font-size: 14px; }
         .btn-p { background: var(--p); color: #fff; }
         input, select, textarea { padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 12px; width: 100%; outline: none; }
@@ -40,28 +35,28 @@
 </head>
 <body>
 
-    <!-- 1. 登录模块 -->
+    <!-- 1. 登录验证模块 -->
     <div id="loginScreen">
         <div class="login-box">
             <h2 style="color:var(--p); margin-top:0">员工系统登录</h2>
-            <div id="loadStatus" style="font-size:12px; color:#999; margin-bottom:20px">正在验证云端连接...</div>
+            <div id="loadStatus" style="font-size:12px; color:#999; margin-bottom:20px">正在同步云端安全组件...</div>
             <input type="text" id="staffId" placeholder="员工账号">
             <input type="password" id="staffPass" placeholder="登录密码">
             <button class="btn btn-p" onclick="staffLogin()" style="width:100%; height:45px">进入工作台</button>
-            <div style="margin-top:15px; font-size:11px; color:#ccc">数据实时同步至悉尼云服务器</div>
+            <div style="margin-top:15px; font-size:11px; color:#ccc">数据加密存储于悉尼节点</div>
         </div>
     </div>
 
-    <!-- 2. 主业务模块 -->
+    <!-- 2. 主业务管理模块 -->
     <div id="appBody" style="display:none; width:100%; height:100%">
         <aside class="sidebar" id="sideNav">
             <div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center">
-                <div style="font-size:12px; color:#888">当前员工: <b id="displayStaff" style="color:var(--p)"></b></div>
+                <div style="font-size:12px; color:#888">工作号: <b id="displayStaff" style="color:var(--p)"></b></div>
                 <button class="btn" onclick="location.reload()" style="padding:5px; background:none; color:var(--d); font-size:12px">安全退出</button>
             </div>
             <div style="padding:10px"><input type="text" id="cSearch" placeholder="查找我的客户..." oninput="renderList()"></div>
             <div class="cust-list" id="custList" style="flex:1; overflow-y:auto"></div>
-            <div style="padding:15px; border-top:1px solid #eee"><button class="btn btn-p" style="width:100%" onclick="showM('custM')">+ 创建新客户档案</button></div>
+            <div style="padding:15px; border-top:1px solid #eee"><button class="btn btn-p" style="width:100%" onclick="showM('custM')">+ 创建客户档案</button></div>
         </aside>
 
         <main class="main">
@@ -71,17 +66,17 @@
                 <button class="btn" onclick="loadData()" style="font-size:12px; background:none; color:var(--p)">同步</button>
             </header>
             <div class="content" id="mainArea">
-                <div style="text-align:center; color:#bfbfbf; margin-top:120px">点击左侧开始工作</div>
+                <div style="text-align:center; color:#bfbfbf; margin-top:120px">欢迎使用对账系统</div>
             </div>
         </main>
     </div>
 
-    <!-- 弹窗 -->
+    <!-- 弹窗部分 -->
     <div id="custM" class="modal"><div class="modal-content">
         <h3 style="margin-top:0">新建客户 (归属个人)</h3>
         <input type="text" id="cN" placeholder="客户姓名">
         <input type="text" id="cA" placeholder="客户账号 / 唯一ID">
-        <textarea id="cMemo" placeholder="备注: 如微信、软件名等" style="height:60px"></textarea>
+        <textarea id="cMemo" placeholder="备注信息" style="height:60px"></textarea>
         <button class="btn btn-p" style="width:100%" onclick="dbAddCust()">确认创建</button>
         <button class="btn" style="width:100%; margin-top:10px; background:none" onclick="hideM('custM')">取消</button>
     </div></div>
@@ -90,13 +85,13 @@
         <h3 style="margin-top:0">记一笔入账</h3>
         <input type="number" id="bA" placeholder="入账金额">
         <select id="bC"><option>微信</option><option>支付宝</option><option>U</option><option>银联</option></select>
-        <input type="text" id="bN" placeholder="备注">
+        <input type="text" id="bN" placeholder="流水备注">
         <button class="btn btn-p" style="width:100%" onclick="dbAddBill()">入账</button>
         <button class="btn" style="width:100%; margin-top:10px; background:none" onclick="hideM('billM')">返回</button>
     </div></div>
 
 <script>
-    // --- 1. 配置区（最顶层初始化） ---
+    // --- 1. 配置区 (STAFF_DB 必须在最顶层初始化) ---
     const STAFF_DB = {
         "staff01": "111111",
         "staff02": "222222",
@@ -104,7 +99,7 @@
     };
 
     const S_URL = 'https://supabase.co'; 
-    const S_KEY = '在此粘贴你的anon_public密钥'; 
+    const S_KEY = '在这里粘贴你的anon_public密钥'; 
     
     let dbClient, db = [], curIdx = -1, currentStaff = "";
 
@@ -112,23 +107,24 @@
     const checkTimer = setInterval(() => {
         const status = document.getElementById('loadStatus');
         if (typeof supabase !== 'undefined') {
-            status.innerText = "云数据库连接已就绪";
+            status.innerText = "云端连接已建立";
             status.style.color = "#52c41a";
             clearInterval(checkTimer);
         }
     }, 500);
 
-    // --- 2. 登录与退出 ---
+    // --- 2. 登录逻辑 (解决初始化顺序报错) ---
     function staffLogin() {
-        if (typeof supabase === 'undefined') {
-            alert("核心组件正在加载，请稍等3秒...");
-            return;
-        }
-        
         const id = document.getElementById('staffId').value;
         const pass = document.getElementById('staffPass').value;
 
+        if (typeof supabase === 'undefined') {
+            alert("核心组件正在连接中，请稍等3秒再试。");
+            return;
+        }
+
         if (STAFF_DB[id] && STAFF_DB[id] === pass) {
+            // 登录成功时才初始化客户端，防止提前调用报错
             dbClient = supabase.createClient(S_URL, S_KEY);
             currentStaff = id;
             document.getElementById('displayStaff').innerText = id;
@@ -136,17 +132,16 @@
             document.getElementById('appBody').style.display = 'flex';
             loadData();
         } else {
-            alert('账号或密码不正确');
+            alert('工号或密码不正确');
         }
     }
 
-    // --- 3. 核心业务逻辑 (带数据隔离) ---
+    // --- 3. 业务逻辑 (带数据隔离) ---
     async function loadData() {
-        // 关键：只加载 owner 等于当前登录账号的客户
         const { data, error } = await dbClient
             .from('customers')
             .select('*')
-            .eq('owner', currentStaff)
+            .eq('owner', currentStaff) // 仅加载属于该员工的客户
             .order('id', { ascending: false });
 
         if(error) return console.error(error);
@@ -159,7 +154,6 @@
         const n = document.getElementById('cN').value, a = document.getElementById('cA').value, m = document.getElementById('cMemo').value;
         if(!n) return alert("姓名必填");
 
-        // 自动注入当前登录的员工ID作为 owner
         const { error } = await dbClient.from('customers').insert([{ 
             name: n, account: a, memo: m, 
             owner: currentStaff, 
@@ -172,15 +166,15 @@
 
     async function dbAddBill() {
         const amt = parseFloat(document.getElementById('bA').value);
-        if(!amt) return alert("金额错误");
+        if(!amt) return alert("金额格式错误");
         const c = db[curIdx];
         const newRecords = [...(c.records || []), { at: new Date().toISOString(), amount: amt, channel: document.getElementById('bC').value, note: document.getElementById('bN').value }];
         const { error } = await dbClient.from('customers').update({ records: newRecords }).eq('id', c.id);
-        if(error) alert("云端同步失败: " + error.message);
+        if(error) alert("同步失败: " + error.message);
         else { hideM('billM'); loadData(); }
     }
 
-    // --- 4. 界面渲染 ---
+    // --- 4. 界面渲染逻辑 ---
     function renderList() {
         const key = document.getElementById('cSearch').value.toLowerCase();
         const list = document.getElementById('custList');
@@ -201,18 +195,18 @@
             <div style="display:flex; align-items:center; gap:15px; margin-bottom:15px">
                 <img src="${c.pic || ''}" style="width:60px;height:60px;border-radius:12px;background:#ddd;object-fit:cover" onclick="document.getElementById('upI').click()">
                 <input type="file" id="upI" hidden onchange="upAvatar(this)">
-                <div style="flex:1"><b>${c.name}</b><br><small style="color:#999">我的客户ID: ${c.account}</small></div>
+                <div style="flex:1"><b>${c.name}</b><br><small style="color:#999">工作ID: ${c.account}</small></div>
                 <button class="btn btn-p" onclick="showM('billM')">记账</button>
             </div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:15px">
                 <div class="stat-card"><small>累计存款</small><div style="font-size:18px;font-weight:700">¥${total.toLocaleString()}</div></div>
-                <div class="stat-card"><small>笔数</small><div style="font-size:18px;font-weight:700">${(c.records||[]).length}</div></div>
+                <div class="stat-card"><small>交易笔数</small><div style="font-size:18px;font-weight:700">${(c.records||[]).length}</div></div>
             </div>
             <div style="background:#fff; border-radius:10px; overflow:hidden">
                 ${(c.records || []).map((r, ri) => `
-                    <div style="padding:12px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between">
+                    <div style="padding:10px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between; font-size:13px">
                         <div><b>${r.channel}</b><br><small style="color:#999;font-size:10px">${new Date(r.at).toLocaleString()}</small></div>
-                        <div style="text-align:right"><b>¥${r.amount}</b><br><a href="javascript:;" onclick="delBill(${ri})" style="color:var(--d);font-size:10px">撤回</a></div>
+                        <div style="text-align:right"><b>¥${r.amount}</b><br><a href="javascript:;" onclick="delBill(${ri})" style="color:var(--d);font-size:10px">撤销记录</a></div>
                     </div>`).reverse().join('')}
             </div>`;
     }
@@ -227,7 +221,7 @@
     }
 
     async function delBill(idx) {
-        if(confirm('确认撤销？')) {
+        if(confirm('确认撤销流水？')) {
             const c = db[curIdx]; c.records.splice(idx, 1);
             await dbClient.from('customers').update({ records: c.records }).eq('id', c.id);
             loadData();
