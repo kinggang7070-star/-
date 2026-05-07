@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>云端审计中心 PRO</title>
-    <!-- 接入 Supabase SDK -->
+    <title>云端财务审计系统</title>
+    <!-- 引入 Supabase 库 -->
     <script src="https://jsdelivr.net"></script>
     <style>
         :root { --p: #1677ff; --s: #52c41a; --d: #ff4d4f; --bg: #f4f7fa; }
         * { box-sizing: border-box; font-family: -apple-system, sans-serif; }
         body { margin: 0; display: flex; height: 100vh; background: var(--bg); overflow: hidden; }
 
-        /* 登录锁屏 */
+        /* 验证锁屏 */
         #lockScreen { position: fixed; inset: 0; background: #fff; z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 
         /* 侧边栏适配 */
@@ -23,7 +23,7 @@
         .top-bar { height: 60px; background: #fff; padding: 0 15px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #eee; }
         .content { flex: 1; overflow-y: auto; padding: 15px; }
 
-        /* 卡片设计 */
+        /* 统计卡片 */
         .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; }
         .stat-card { background: #fff; padding: 12px; border-radius: 10px; border: 1px solid #eee; border-top: 3px solid #ddd; }
         .stat-v { font-size: 18px; font-weight: 700; margin: 5px 0; color: var(--p); }
@@ -37,17 +37,19 @@
         .av { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: #eee; }
 
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2000; align-items: center; justify-content: center; }
-        .modal-content { background: #fff; padding: 20px; border-radius: 15px; width: 90%; max-width: 350px; }
+        .modal-content { background: #fff; padding: 25px; border-radius: 15px; width: 90%; max-width: 380px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
 
+    <!-- 登录锁屏 -->
     <div id="lockScreen">
-        <h2 style="color:var(--p)">财务系统验证</h2>
+        <h2 style="color:var(--p)">财务系统安全验证</h2>
         <input type="password" id="sysPass" placeholder="请输入访问密码" style="width:250px; text-align:center">
         <button class="btn btn-p" onclick="checkPass()" style="width:250px">解锁进入</button>
     </div>
 
+    <!-- 主程序体 -->
     <div id="appBody" style="display:none; width:100%; height:100%">
         <aside class="sidebar" id="sideNav">
             <div style="padding:15px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center">
@@ -58,27 +60,31 @@
                 <input type="text" id="cSearch" placeholder="搜索姓名/账号..." oninput="renderList()">
             </div>
             <div class="cust-list" id="custList" style="flex:1; overflow-y:auto"></div>
-            <div style="padding:15px"><button class="btn btn-p" style="width:100%" onclick="showM('custM')">+ 新增客户</button></div>
+            <div style="padding:15px; border-top:1px solid #eee">
+                <button class="btn btn-p" style="width:100%" onclick="showM('custM')">+ 新增客户档案</button>
+            </div>
         </aside>
 
         <main class="main">
             <header class="top-bar">
                 <button class="btn" onclick="toggleMenu()" style="background:#f0f0f0">☰ 客户</button>
                 <div id="activeTitle" style="font-weight:700">请选择客户</div>
-                <button class="btn" onclick="load()" style="font-size:12px">刷新</button>
+                <button class="btn" onclick="load()" style="font-size:12px">刷新同步</button>
             </header>
-            <div class="content" id="mainArea"></div>
+            <div class="content" id="mainArea">
+                <div style="text-align:center; color:#bfbfbf; margin-top:150px">已连接云端数据库，请选择左侧客户</div>
+            </div>
         </main>
     </div>
 
-    <!-- 弹窗：客户 -->
+    <!-- 弹窗：新建客户 -->
     <div id="custM" class="modal">
         <div class="modal-content">
-            <h3>新建档案</h3>
-            <input type="text" id="cN" placeholder="客户姓名">
-            <input type="text" id="cA" placeholder="唯一账号/ID">
-            <textarea id="cMemo" placeholder="备注信息" style="height:60px"></textarea>
-            <button class="btn btn-p" style="width:100%" onclick="dbAddCust()">保存</button>
+            <h3 style="margin-top:0">新建客户档案</h3>
+            <input type="text" id="cN" placeholder="客户姓名 (必填)">
+            <input type="text" id="cA" placeholder="客户账号 / 唯一ID">
+            <textarea id="cMemo" placeholder="备注信息 (软件/社交号等)" style="height:80px"></textarea>
+            <button class="btn btn-p" style="width:100%" onclick="dbAddCust()">保存档案</button>
             <button class="btn" style="width:100%; margin-top:10px; background:none" onclick="hideM('custM')">返回</button>
         </div>
     </div>
@@ -86,37 +92,38 @@
     <!-- 弹窗：记账 -->
     <div id="billM" class="modal">
         <div class="modal-content">
-            <h3>记一笔流水</h3>
-            <input type="number" id="bA" placeholder="金额">
+            <h3 style="margin-top:0">记一笔入账</h3>
+            <input type="number" id="bA" placeholder="金额 (元)">
             <select id="bC"><option>微信</option><option>支付宝</option><option>U</option><option>银联</option></select>
-            <input type="text" id="bN" placeholder="备注">
+            <input type="text" id="bN" placeholder="流水备注">
             <button class="btn btn-p" style="width:100%" onclick="dbAddBill()">入账</button>
-            <button class="btn" style="width:100%; margin-top:10px; background:none" onclick="hideM('billM')">返回</button>
+            <button class="btn" style="width:100%; margin-top:10px; background:none" onclick="hideM('billM')">取消</button>
         </div>
     </div>
 
 <script>
-    // --- 1. 配置区（请确保 URL 正确） ---
+    // --- 1. 配置区 ---
     const S_URL = 'https://supabase.co';
-    const S_KEY = '在此填入你的anon_public_key'; 
+    const S_KEY = '在此粘贴你的anon_public长字符串'; 
     const ACCESS_PASS = '123456'; 
-    const supabase = supabase.createClient(S_URL, S_KEY);
+    
+    // 初始化 dbClient (修正了报错的变量命名)
+    const dbClient = supabase.createClient(S_URL, S_KEY);
 
     let db = [], curIdx = -1;
 
     function checkPass() {
-        const input = document.getElementById('sysPass').value;
-        if(input === ACCESS_PASS) {
+        if(document.getElementById('sysPass').value === ACCESS_PASS) {
             document.getElementById('lockScreen').style.display = 'none';
             document.getElementById('appBody').style.display = 'flex';
             load();
         } else { alert('密码错误'); }
     }
 
-    // --- 2. 核心数据交互 ---
+    // --- 2. 数据云端交互 ---
     async function load() {
-        const { data, error } = await supabase.from('customers').select('*').order('id', { ascending: false });
-        if(error) { console.error(error); return; }
+        const { data, error } = await dbClient.from('customers').select('*').order('id', { ascending: false });
+        if(error) { console.error("读取失败:", error); return; }
         db = data || [];
         renderList();
         if(curIdx !== -1) renderDetail();
@@ -128,15 +135,14 @@
         const m = document.getElementById('cMemo').value;
         if(!n) return alert("请输入姓名");
 
-        const { data, error } = await supabase.from('customers').insert([
+        const { error } = await dbClient.from('customers').insert([
             { name: n, account: a, memo: m, records: [], pic: '', social: [] }
-        ]).select();
+        ]);
 
         if (error) {
-            alert("保存失败！具体原因：" + error.message);
-            console.error(error);
+            alert("保存失败！请检查数据库是否加了'name'列并关了RLS。错误：" + error.message);
         } else {
-            alert("创建成功！");
+            alert("新建成功");
             hideM('custM');
             load();
         }
@@ -146,8 +152,8 @@
         const amt = parseFloat(document.getElementById('bA').value);
         if(!amt) return alert("请输入金额");
         const c = db[curIdx];
-        const records = [...(c.records || []), { at: new Date().toISOString(), amount: amt, channel: document.getElementById('bC').value, note: document.getElementById('bN').value }];
-        const { error } = await supabase.from('customers').update({ records }).eq('id', c.id);
+        const newRecords = [...(c.records || []), { at: new Date().toISOString(), amount: amt, channel: document.getElementById('bC').value, note: document.getElementById('bN').value }];
+        const { error } = await dbClient.from('customers').update({ records: newRecords }).eq('id', c.id);
         if(error) alert("记账失败：" + error.message);
         else { hideM('billM'); load(); }
     }
@@ -178,13 +184,13 @@
             </div>
             <div class="stat-grid">
                 <div class="stat-card"><small>累计存款</small><div class="stat-v">¥${total}</div></div>
-                <div class="stat-card"><small>交易笔数</small><div class="stat-v">${c.records.length}</div></div>
+                <div class="stat-card"><small>交易笔数</small><div class="stat-v">${(c.records||[]).length}</div></div>
             </div>
             <div style="background:#fff; border-radius:10px; overflow:hidden">
                 ${(c.records || []).map((r, ri) => `
                     <div style="padding:12px; border-bottom:1px solid #f5f5f5; display:flex; justify-content:space-between">
                         <div><small style="color:#ccc; font-size:10px">${new Date(r.at).toLocaleDateString()}</small><br><b>${r.channel}</b></div>
-                        <div style="text-align:right"><b>¥${r.amount}</b><br><a href="#" onclick="delBill(${ri})" style="color:var(--d);font-size:10px">撤销</a></div>
+                        <div style="text-align:right"><b>¥${r.amount}</b><br><a href="javascript:;" onclick="delBill(${ri})" style="color:var(--d);font-size:10px">撤销</a></div>
                     </div>`).reverse().join('')}
             </div>`;
     }
@@ -192,8 +198,8 @@
     async function upAvatar(input) {
         const reader = new FileReader();
         reader.onload = async e => {
-            const { error } = await supabase.from('customers').update({ pic: e.target.result }).eq('id', db[curIdx].id);
-            if(!error) load();
+            await dbClient.from('customers').update({ pic: e.target.result }).eq('id', db[curIdx].id);
+            load();
         };
         reader.readAsDataURL(input.files);
     }
@@ -201,7 +207,7 @@
     async function delBill(idx) {
         if(confirm('确认撤销该流水？')) {
             const c = db[curIdx]; c.records.splice(idx, 1);
-            await supabase.from('customers').update({ records: c.records }).eq('id', c.id);
+            await dbClient.from('customers').update({ records: c.records }).eq('id', c.id);
             load();
         }
     }
